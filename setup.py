@@ -11,7 +11,7 @@ setup(name="twirp",
       description="Twirp server and client lib",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      licesnse='unlicense',
+      license='unlicense',
       packages=['twirp'],
       install_requires=[
             'requests',
