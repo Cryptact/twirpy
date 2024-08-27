@@ -11,7 +11,7 @@ For details about the twirp project, check https://github.com/twitchtv/twirp
 Grab the protoc plugin to generate files with
 
 ```
-go get -u github.com/verloop/twirpy/protoc-gen-twirpy
+go install github.com/verloop/twirpy/protoc-gen-twirpy@latest
 ```
 
 Add the twirp package to your project
