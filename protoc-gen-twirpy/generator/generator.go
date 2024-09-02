@@ -2,7 +2,6 @@ package generator
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -16,14 +15,20 @@ func Generate(r *plugin.CodeGeneratorRequest) *plugin.CodeGeneratorResponse {
 	resp := &plugin.CodeGeneratorResponse{}
 	resp.SupportedFeatures = proto.Uint64(uint64(plugin.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL))
 
-	files := r.GetFileToGenerate()
-	for _, fileName := range files {
-		fd, err := getFileDescriptor(r.GetProtoFile(), fileName)
-		if err != nil {
-			resp.Error = proto.String("File[" + fileName + "][descriptor]: " + err.Error())
+	// Build a map of the descriptors of all .proto files indexed by fully qualified names
+	protoFileDescriptors := make(map[string]*descriptor.FileDescriptorProto)
+	for _, fd := range r.GetProtoFile() {
+		protoFileDescriptors[fd.GetName()] = fd
+	}
+
+	for _, fileName := range r.GetFileToGenerate() {
+		fd, ok := protoFileDescriptors[fileName]
+		if !ok {
+			resp.Error = proto.String("File[" + fileName + "][descriptor]: could not find descriptor")
 			return resp
 		}
 
+		// Skip the file if there is no service in it
 		if len(fd.GetService()) == 0 {
 			continue
 		}
@@ -46,31 +51,29 @@ func GenerateTwirpFile(fd *descriptor.FileDescriptorProto) (*plugin.CodeGenerato
 		FileName: name,
 	}
 
-	svcs := fd.GetService()
-	for _, svc := range svcs {
-		svcURL := fmt.Sprintf("%s.%s", fd.GetPackage(), svc.GetName())
-		twirpSvc := &TwirpService{
-			Name:       svc.GetName(),
-			ServiceURL: svcURL,
+	for _, service := range fd.GetService() {
+		serviceURL := fmt.Sprintf("%s.%s", fd.GetPackage(), service.GetName())
+		twirpService := &TwirpService{
+			Name:       service.GetName(),
+			ServiceURL: serviceURL,
 		}
 
-		for _, method := range svc.GetMethod() {
+		for _, method := range service.GetMethod() {
 			twirpMethod := &TwirpMethod{
-				ServiceURL:  svcURL,
-				ServiceName: twirpSvc.Name,
+				ServiceURL:  serviceURL,
+				ServiceName: twirpService.Name,
 				Name:        method.GetName(),
 				Input:       getSymbol(method.GetInputType()),
 				Output:      getSymbol(method.GetOutputType()),
 			}
 
-			twirpSvc.Methods = append(twirpSvc.Methods, twirpMethod)
+			twirpService.Methods = append(twirpService.Methods, twirpMethod)
 		}
-		vars.Services = append(vars.Services, twirpSvc)
+		vars.Services = append(vars.Services, twirpService)
 	}
 
 	var buf = &bytes.Buffer{}
-	err := TwirpTemplate.Execute(buf, vars)
-	if err != nil {
+	if err := TwirpTemplate.Execute(buf, vars); err != nil {
 		return nil, err
 	}
 
@@ -78,20 +81,9 @@ func GenerateTwirpFile(fd *descriptor.FileDescriptorProto) (*plugin.CodeGenerato
 		Name:    proto.String(strings.TrimSuffix(name, path.Ext(name)) + "_twirp.py"),
 		Content: proto.String(buf.String()),
 	}
-
 	return resp, nil
 }
 
 func getSymbol(name string) string {
 	return strings.TrimPrefix(name, ".")
-}
-
-func getFileDescriptor(files []*descriptor.FileDescriptorProto, name string) (*descriptor.FileDescriptorProto, error) {
-	//Assumption: Number of files will not be large enough to justify making a map
-	for _, f := range files {
-		if f.GetName() == name {
-			return f, nil
-		}
-	}
-	return nil, errors.New("could not find descriptor")
 }
