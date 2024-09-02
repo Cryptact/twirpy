@@ -1,7 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
+	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -10,34 +11,43 @@ import (
 	plugin "google.golang.org/protobuf/types/pluginpb"
 )
 
-func main() {
-	data, err := ioutil.ReadAll(os.Stdin)
+func buildCodeGeneratorRequest(r io.Reader) (*plugin.CodeGeneratorRequest, error) {
+	data, err := io.ReadAll(r)
 	if err != nil {
-		log.Fatalln("could not read from stdin", err)
-		return
+		return nil, fmt.Errorf("could not read from stdin: %w", err)
 	}
 	var req = &plugin.CodeGeneratorRequest{}
-	err = proto.Unmarshal(data, req)
-	if err != nil {
-		log.Fatalln("could not unmarshal proto", err)
-		return
+	if err = proto.Unmarshal(data, req); err != nil {
+		return nil, fmt.Errorf("could not unmarshal proto: %w", err)
 	}
 	if len(req.GetFileToGenerate()) == 0 {
-		log.Fatalln("no files to generate")
-		return
+		return nil, fmt.Errorf("no files to generate")
 	}
-	resp := generator.Generate(req)
+	return req, nil
+}
 
+func writeCodeGeneratorResponse(w io.Writer, resp *plugin.CodeGeneratorResponse) error {
+	data, err := proto.Marshal(resp)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal response proto: %w", err)
+	}
+	_, err = w.Write(data)
+	return err
+}
+
+func main() {
+	req, err := buildCodeGeneratorRequest(os.Stdin)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	resp := generator.Generate(req)
 	if resp == nil {
 		resp = &plugin.CodeGeneratorResponse{}
 	}
 
-	data, err = proto.Marshal(resp)
+	err = writeCodeGeneratorResponse(os.Stdout, resp)
 	if err != nil {
-		log.Fatalln("could not unmarshal response proto", err)
-	}
-	_, err = os.Stdout.Write(data)
-	if err != nil {
-		log.Fatalln("could not write response to stdout", err)
+		log.Fatalln(err)
 	}
 }
