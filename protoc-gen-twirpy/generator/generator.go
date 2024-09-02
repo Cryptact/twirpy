@@ -7,9 +7,9 @@ import (
 	"path"
 	"strings"
 
-  descriptor "google.golang.org/protobuf/types/descriptorpb"
-  plugin "google.golang.org/protobuf/types/pluginpb"
 	"google.golang.org/protobuf/proto"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
+	plugin "google.golang.org/protobuf/types/pluginpb"
 )
 
 func Generate(r *plugin.CodeGeneratorRequest) *plugin.CodeGeneratorResponse {
