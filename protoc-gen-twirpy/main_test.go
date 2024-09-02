@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func loadProto(t *testing.T) *os.File {
 func loadGenerated(t *testing.T) []byte {
 	file, err := os.Open("../example/generated/haberdasher_twirp.py")
 	require.NoError(t, err)
-	result, err := ioutil.ReadAll(file)
+	result, err := io.ReadAll(file)
 	require.NoError(t, err)
 	return result
 }
@@ -30,8 +30,8 @@ func captureOutput(t *testing.T, f func()) []byte {
 	os.Stdout = w
 	f()
 	os.Stdout = orig
-	w.Close()
-	out, err := ioutil.ReadAll(r)
+	require.NoError(t, w.Close())
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	return out
 }
