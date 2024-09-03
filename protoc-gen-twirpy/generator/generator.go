@@ -15,17 +15,32 @@ func Generate(r *plugin.CodeGeneratorRequest) *plugin.CodeGeneratorResponse {
 	resp := &plugin.CodeGeneratorResponse{}
 	resp.SupportedFeatures = proto.Uint64(uint64(plugin.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL))
 
+	responseFiles, err := generateFiles(r)
+	if err != nil {
+		resp.Error = proto.String(err.Error())
+	}
+	resp.File = responseFiles
+
+	return resp
+}
+
+func generateFiles(r *plugin.CodeGeneratorRequest) ([]*plugin.CodeGeneratorResponse_File, error) {
+	responseFiles := []*plugin.CodeGeneratorResponse_File{}
+
+	protoFiles := r.GetProtoFile()
+
 	// Build a map of the descriptors of all .proto files indexed by fully qualified names
 	protoFileDescriptors := make(map[string]*descriptor.FileDescriptorProto)
-	for _, fd := range r.GetProtoFile() {
+	for _, fd := range protoFiles {
 		protoFileDescriptors[fd.GetName()] = fd
 	}
+
+	messagesToFiles := buildMessagesToFiles(protoFiles)
 
 	for _, fileName := range r.GetFileToGenerate() {
 		fd, ok := protoFileDescriptors[fileName]
 		if !ok {
-			resp.Error = proto.String("File[" + fileName + "][descriptor]: could not find descriptor")
-			return resp
+			return nil, fmt.Errorf("File[%s][descriptor]: could not find descriptor", fileName)
 		}
 
 		// Skip the file if there is no service in it
@@ -33,23 +48,29 @@ func Generate(r *plugin.CodeGeneratorRequest) *plugin.CodeGeneratorResponse {
 			continue
 		}
 
-		twirpFile, err := GenerateTwirpFile(fd)
+		templateVars, err := buildTwirpServiceDescription(messagesToFiles, fd)
 		if err != nil {
-			resp.Error = proto.String("File[" + fileName + "][generate]: " + err.Error())
-			return resp
+			return nil, fmt.Errorf("File[%s][descriptor]: %w", fileName, err)
 		}
-		resp.File = append(resp.File, twirpFile)
+
+		twirpFile, err := generateTwirpFile(templateVars)
+		if err != nil {
+			return nil, fmt.Errorf("File[%s][descriptor]: %w", fileName, err)
+		}
+		responseFiles = append(responseFiles, twirpFile)
 	}
-	return resp
+
+	return responseFiles, nil
 }
 
-func GenerateTwirpFile(fd *descriptor.FileDescriptorProto) (*plugin.CodeGeneratorResponse_File, error) {
-
+func buildTwirpServiceDescription(messagesToFiles map[string]string, fd *descriptor.FileDescriptorProto) (*ProtoFileDescription, error) {
 	name := fd.GetName()
 
-	vars := TwirpTemplateVariables{
+	vars := &ProtoFileDescription{
 		FileName: name,
 	}
+
+	imports := newImportBuilder(messagesToFiles)
 
 	for _, service := range fd.GetService() {
 		serviceURL := fmt.Sprintf("%s.%s", fd.GetPackage(), service.GetName())
@@ -59,12 +80,24 @@ func GenerateTwirpFile(fd *descriptor.FileDescriptorProto) (*plugin.CodeGenerato
 		}
 
 		for _, method := range service.GetMethod() {
+			qualifiedInput, err := imports.addImportAndQualify(method.GetInputType())
+			if err != nil {
+				return nil, err
+			}
+
+			qualifiedOutput, err := imports.addImportAndQualify(method.GetOutputType())
+			if err != nil {
+				return nil, err
+			}
+
 			twirpMethod := &TwirpMethod{
-				ServiceURL:  serviceURL,
-				ServiceName: twirpService.Name,
-				Name:        method.GetName(),
-				Input:       getSymbol(method.GetInputType()),
-				Output:      getSymbol(method.GetOutputType()),
+				ServiceURL:      serviceURL,
+				ServiceName:     twirpService.Name,
+				Name:            method.GetName(),
+				Input:           getSymbol(method.GetInputType()),
+				Output:          getSymbol(method.GetOutputType()),
+				QualifiedInput:  qualifiedInput,
+				QualifiedOutput: qualifiedOutput,
 			}
 
 			twirpService.Methods = append(twirpService.Methods, twirpMethod)
@@ -72,18 +105,35 @@ func GenerateTwirpFile(fd *descriptor.FileDescriptorProto) (*plugin.CodeGenerato
 		vars.Services = append(vars.Services, twirpService)
 	}
 
+	for _, importStmt := range imports.imports {
+		vars.Imports = append(vars.Imports, importStmt)
+	}
+
+	return vars, nil
+}
+
+func generateTwirpFile(vars *ProtoFileDescription) (*plugin.CodeGeneratorResponse_File, error) {
 	var buf = &bytes.Buffer{}
 	if err := TwirpTemplate.Execute(buf, vars); err != nil {
 		return nil, err
 	}
 
-	resp := &plugin.CodeGeneratorResponse_File{
-		Name:    proto.String(strings.TrimSuffix(name, path.Ext(name)) + "_twirp.py"),
+	return &plugin.CodeGeneratorResponse_File{
+		Name:    proto.String(strings.TrimSuffix(vars.FileName, path.Ext(vars.FileName)) + "_twirp.py"),
 		Content: proto.String(buf.String()),
-	}
-	return resp, nil
+	}, nil
 }
 
 func getSymbol(name string) string {
 	return strings.TrimPrefix(name, ".")
+}
+
+func buildMessagesToFiles(fds []*descriptor.FileDescriptorProto) map[string]string {
+	mapOut := make(map[string]string)
+	for _, fd := range fds {
+		for _, msg := range fd.GetMessageType() {
+			mapOut[fd.GetPackage()+"."+msg.GetName()] = fd.GetName()
+		}
+	}
+	return mapOut
 }

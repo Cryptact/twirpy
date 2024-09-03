@@ -16,11 +16,20 @@ func loadProto(t *testing.T) *os.File {
 }
 
 func loadGenerated(t *testing.T) []byte {
-	file, err := os.Open("../example/generated/haberdasher_twirp.py")
+	file, err := os.Open("test_data/protoc_output.data")
+	defer file.Close()
 	require.NoError(t, err)
 	result, err := io.ReadAll(file)
 	require.NoError(t, err)
 	return result
+}
+
+func replaceGenerated(t *testing.T, data []byte) {
+	file, err := os.Create("test_data/protoc_output.data")
+	defer file.Close()
+	require.NoError(t, err)
+	_, err = file.Write(data)
+	require.NoError(t, err)
 }
 
 func captureOutput(t *testing.T, f func()) []byte {
@@ -39,6 +48,8 @@ func captureOutput(t *testing.T, f func()) []byte {
 func TestMainFn(t *testing.T) {
 	os.Stdin = loadProto(t)
 	result := captureOutput(t, main)
-	assert.Equal(t, "\x10\x01z\xc8\r\n\x14haberdasher_twirp.pyz\xaf\r", string(result[:30]))
-	assert.Equal(t, loadGenerated(t), result[30:]) // skip the first 30 bytes which are the header
+	if os.Getenv("TEST_DATA_UPDATE") == "1" {
+		replaceGenerated(t, result)
+	}
+	assert.Equal(t, string(loadGenerated(t)), string(result))
 }
