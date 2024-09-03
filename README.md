@@ -1,112 +1,72 @@
 # Twirpy
 
-Python implementation of Twirp RPC framework (supports [Twirp Wire Protocol v7](https://twitchtv.github.io/twirp/docs/spec_v7.html)).
+> Twirp is a framework for service-to-service communication emphasizing simplicity and minimalism.
+> It generates routing and serialization from API definition files and lets you focus on your application's logic
+> instead of thinking about folderol like HTTP methods and paths and JSON.
+> 
+> -- <cite>[Twirp's README](https://github.com/twitchtv/twirp/blob/main/README.md)</cite>
 
-This repo contains a protoc plugin that generates sever and client code and a pypi package with common implementation details.
+Twirpy is a Python implementation of the Twirp framework.
+It currently supports [Twirp Wire Protocol v7](https://twitchtv.github.io/twirp/docs/spec_v7.html).
 
-For details about the twirp project, check https://github.com/twitchtv/twirp
+This repository contains:
+* a protoc (aka the Protocol Compiler) plugin that generates sever and client code;
+* a Python package with common implementation details.
 
 ## Installation
 
-Grab the protoc plugin to generate files with
+### Runtime Library
 
-```
-go install github.com/verloop/twirpy/protoc-gen-twirpy@latest
-```
+The runtime library package contains common types like `TwirpServer` and `TwirpClient` that are used by the generated code.
 
-Add the twirp package to your project
+Add the Twirp package to your Python project with:
 ```
 pip install twirp
 ```
 
-You'll also need [uvicorn](https://www.uvicorn.org/) to run the server.
+### Code Generator
+
+You need to install `go` and the `protoc` compiler in your system.
+Then, install the `protoc-gen-twirpy` protoc plugin to generate code.
+
+First, install the following prerequisites:
+- [Go](https://golang.org/): For installation instructions, see [Go’s documentation](https://golang.org/doc/install).
+- [Protocol Buffers](https://developers.google.com/protocol-buffers) compiler: For installation instructions, see [Protocol Buffer Compiler Installation documentation](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation). You can also use your package manager (e.g. `brew install protobuf` on macOS).
+
+The installed plugin need to be accessible by the protoc compiler. 
+Set GOBIN (see [go help environment](https://golang.org/cmd/go/#hdr-Environment_variables)) to define where the tool dependencies will be installed.
+You might need to add GOBIN to your PATH:
+```sh
+export GOBIN=$HOME/go/bin
+export PATH=$GOBIN:$PATH
+```
+
+Then, install the plugin with
+```sh
+go install github.com/cryptact/twirpy/protoc-gen-twirpy@latest
+```
 
 ## Generate and run
+
 Use the protoc plugin to generate twirp server and client code.
-
-We'll assume familiarity with the example from the docs. https://twitchtv.github.io/twirp/docs/example.html
-
-```
-protoc --python_out=./ --twirpy_out=./ ./haberdasher.proto
+```sh
+protoc --python_out=. --pyi_out=. --twirpy_out=. example/rpc/haberdasher/service.proto
 ```
 
-### Server code
-```python
-# server.py
-import random
+For more information on how to generate code, see the [example](example/README.md).
 
-from twirp.asgi import TwirpASGIApp
-from twirp.exceptions import InvalidArgument
+## Development
 
-from . import haberdasher_twirp, haberdasher_pb2
-
-class HaberdasherService(object):
-    def MakeHat(self, context, size):
-        if size.inches <= 0:
-            raise InvalidArgument(argument="inches", error="I can't make a hat that small!")
-        return haberdasher_pb2.Hat(
-            size=size.inches,
-            color= random.choice(["white", "black", "brown", "red", "blue"]),
-            name=random.choice(["bowler", "baseball cap", "top hat", "derby"])
-        )
-
-
-# if you are using a custom prefix, then pass it as `server_path_prefix`
-# param to `HaberdasherServer` class.
-service = haberdasher_twirp.HaberdasherServer(service=HaberdasherService())
-app = TwirpASGIApp()
-app.add_service(service)
+```sh
+pyenv install
+python -m venv --upgrade-deps venv
+source venv/bin/activate
+pip install setuptools
+pip install -e .
 ```
-
-Run the server with
-```
-uvicorn twirp_server:app --port=3000
-```
-
-### Client code
-
-```python
-# client.py
-from twirp.context import Context
-from twirp.exceptions import TwirpServerException
-
-from . import haberdasher_twirp, haberdasher_pb2
-
-client = haberdasher_twirp.HaberdasherClient("http://localhost:3000")
-
-# if you are using a custom prefix, then pass it as `server_path_prefix`
-# param to `MakeHat` class.
-try:
-    response = client.MakeHat(ctx=Context(), request=haberdasher_pb2.Size(inches=12))
-    print(response)
-except TwirpServerException as e:
-    print(e.code, e.message, e.meta, e.to_dict())
-```
-
-## Twirp Wire Protocol (v7)
-
-Twirpy generates the code based on the protocol v7. This is a breaking change from the previous v5 and you can see the changes [here](https://twitchtv.github.io/twirp/docs/spec_v7.html#differences-with-v5).
-
-This new version comes with flexibility to use any prefix for the server URLs and defaults to `/twirp`. To use an empty prefix or any custom prefix like `/my/custom/prefix`, pass it as a `server_path_prefix` param to server and clients. Check the example directory, which uses `/twirpy` as a custom prefix.
-
-If you want to use the server and clients of v5, then use the [0.0.1](https://github.com/verloop/twirpy/releases/tag/0.0.1) release.
-
-### Message Body Length
-
-Currently, message body length limit is set to 100kb, you can override this by passing `max_receive_message_length` to `TwirpASGIApp` constructor.
-
-```python
-# this sets max message length to be 10 bytes
-app = TwirpASGIApp(max_receive_message_length=10)
-
-```
-
-## Support and community
-Python: [#twirp](https://pythondev.slack.com/messages/twirp). Join PySlackers [here](https://pyslackers.com/web)
-
-Go: [#twirp](https://gophers.slack.com/messages/twirp). Join Gophers community slack [here](https://invite.slack.golangbridge.org)
 
 ## Standing on the shoulders of giants
 
 - The initial version of twirpy was made from an internal copy of https://github.com/daroot/protoc-gen-twirp_python_srv
+- The work done by [Verloop](https://verloop.io/) on [the initial versions of Twirpy](https://github.com/verloop/twirpy).
 - The `run_in_threadpool` method comes from https://github.com/encode/starlette
