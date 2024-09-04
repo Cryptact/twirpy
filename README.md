@@ -26,25 +26,21 @@ pip install twirpy
 
 ### Code Generator
 
-You need to install `go` and the `protoc` compiler in your system.
-Then, install the `protoc-gen-twirpy` protoc plugin to generate code.
+You need to install `protoc`, the Protocol Buffers compiler, and the `protoc-gen-twirpy` protoc plugin to generate code.
 
-First, install the following prerequisites:
-- [Go](https://golang.org/): For installation instructions, see [Go’s documentation](https://golang.org/doc/install).
-- [Protocol Buffers](https://developers.google.com/protocol-buffers) compiler: For installation instructions, see [Protocol Buffer Compiler Installation documentation](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation). You can also use your package manager (e.g. `brew install protobuf` on macOS).
+First, install the [Protocol Buffers](https://developers.google.com/protocol-buffers) compiler.
+For installation instructions, see [Protocol Buffer Compiler Installation documentation](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation).
+You can also use your package manager (e.g. `brew install protobuf` on macOS).
 
-The installed plugin need to be accessible by the protoc compiler.
-Set GOBIN (see [go help environment](https://golang.org/cmd/go/#hdr-Environment_variables)) to define where the tool dependencies will be installed.
-You might need to add GOBIN to your PATH:
+Go the [releases page](https://github.com/Cryptact/twirpy/releases/latest), and download the `protoc-gen-twirpy` binary for your platform.
+Unzip the archive and move the binary to a directory in your PATH.
+
+On macOS, you can use the following commands:
 ```sh
-export GOBIN=$HOME/go/bin
-export PATH=$GOBIN:$PATH
-```
-
-Then, install the plugin with:
-```sh
-go install github.com/cryptact/twirpy/protoc-gen-twirpy@latest
-```
+curl -L -o- \
+  https://github.com/Cryptact/twirpy/releases/latest/download/protoc-gen-twirpy_Darwin_arm64.tar.gz \
+  | tar xz -C ~/.local/bin protoc-gen-twirpy
+````
 
 ## Generate and run
 
