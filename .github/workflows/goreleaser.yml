@@ -1,17 +1,23 @@
 # https://goreleaser.com/ci/actions/#workflow
-name: goreleaser
+name: Upload protoc-gen-twirpy binaries
 
 on:
   release:
     types: [published]
 
 permissions:
-  id-token: write
   contents: write
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+
+    environment:
+      name: goreleaser
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,8 +27,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: stable
-      # More assembly might be required: Docker logins, GPG, etc.
-      # It all depends on your needs.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
