@@ -1,6 +1,5 @@
 import os
 import logging
-import sys
 
 import structlog
 from structlog.stdlib import LoggerFactory, add_log_level
@@ -8,7 +7,7 @@ from structlog.stdlib import LoggerFactory, add_log_level
 _configured = False
 
 
-def configure(force = False):
+def configure(force=False):
     """
     Configures logging & structlog modules
 
@@ -21,7 +20,7 @@ def configure(force = False):
         return
 
     # Check whether debug flag is set
-    debug = os.environ.get('DEBUG_MODE', False)
+    debug = os.environ.get("DEBUG_MODE", False)
     # Set appropriate log level
     if debug:
         log_level = logging.DEBUG
@@ -30,24 +29,24 @@ def configure(force = False):
 
     # Set logging config
     logging.basicConfig(
-        level = log_level,
-        format = "%(message)s",
+        level=log_level,
+        format="%(message)s",
     )
 
     # Configure structlog
     structlog.configure(
-        logger_factory = LoggerFactory(),
-        processors = [
+        logger_factory=LoggerFactory(),
+        processors=[
             add_log_level,
             # Add timestamp
-            structlog.processors.TimeStamper('iso'),
+            structlog.processors.TimeStamper("iso"),
             # Add stack information
             structlog.processors.StackInfoRenderer(),
             # Set exception field using exec info
             structlog.processors.format_exc_info,
             # Render event_dict as JSON
-            structlog.processors.JSONRenderer()
-        ]
+            structlog.processors.JSONRenderer(),
+        ],
     )
 
     _configured = True

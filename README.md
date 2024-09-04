@@ -41,7 +41,7 @@ export GOBIN=$HOME/go/bin
 export PATH=$GOBIN:$PATH
 ```
 
-Then, install the plugin with
+Then, install the plugin with:
 ```sh
 go install github.com/cryptact/twirpy/protoc-gen-twirpy@latest
 ```

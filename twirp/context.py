@@ -1,16 +1,17 @@
 from . import logging
 
 
-class Context(object):
-    """Context object for storing context information of 
+class Context:
+    """Context object for storing context information of
     request currently being processed.
     """
-    def __init__(self, *args, logger = None, headers = None):
+
+    def __init__(self, *args, logger=None, headers=None):
         """Create a new Context object
 
         Keyword arguments:
         logger: Logger that will be used for logging.
-        headers: Headers for the request. 
+        headers: Headers for the request.
         """
         self._values = {}
         if logger is None:
@@ -23,7 +24,7 @@ class Context(object):
 
     def set(self, key, value):
         """Set a Context value
-        
+
         Arguments:
         key: Key for the context key-value pair.
         value: Value to be stored.
@@ -32,7 +33,7 @@ class Context(object):
 
     def get(self, key):
         """Get a Context value
-        
+
         Arguments:
         key: Key for the context key-value pair.
         """
@@ -41,10 +42,10 @@ class Context(object):
     def get_logger(self):
         """Get current logger used by Context."""
         return self._logger
-    
+
     def set_logger(self, logger):
         """Set logger for this Context
-        
+
         Arguments:
         logger: Logger object to be used.
         """
@@ -56,7 +57,7 @@ class Context(object):
 
     def set_header(self, key, value):
         """Set a request header
-        
+
         Arguments:
         key: Key for the header.
         value: Value for the header.

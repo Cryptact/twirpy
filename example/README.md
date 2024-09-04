@@ -103,7 +103,7 @@ from twirp.exceptions import InvalidArgument
 from ..rpc.haberdasher import service_pb2 as pb
 
 
-class HaberdasherService(object):
+class HaberdasherService:
     def MakeHat(self, context: Context, size: pb.Size) -> pb.Hat:
         if size.inches <= 0:
             raise InvalidArgument(argument="inches", error="I can't make a hat that small!")
@@ -116,7 +116,7 @@ class HaberdasherService(object):
 
 ## Mount and run the server
 
-To serve our Haberdasher over HTTP, use the generated server class `{{Service}}Server`. 
+To serve our Haberdasher over HTTP, use the generated server class `{{Service}}Server`.
 For Haberdasher, it is: `class HaberdasherServer(TwirpServer)`.
 
 This constructor wraps your protocol implementation as a `TwirpServer`, which needs to be added as a service to a `TwirpASGIApp`.
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
 ```
 
-If you have the server running in another terminal, try running this client with `python -m example.client`. 
+If you have the server running in another terminal, try running this client with `python -m example.client`.
 Enjoy the new hat!
 
 You can also make an asynchronous version of it.
@@ -219,4 +219,4 @@ You will need to install `aiohttp` to run the example.
 pip install twirp[async]
 ```
 
-Try running this client with `python -m example.client.async`. 
+Try running this client with `python -m example.client.async`.

@@ -1,27 +1,19 @@
-
-try:
-    import http.client as httplib
-except ImportError:
-    import httplib
-
-try:
-    import ujson as json
-except:
-    import json
+import json
+from http.client import HTTPException
+from typing import Any
 
 from . import errors
 
 
-
-class TwirpServerException(httplib.HTTPException):
-    def __init__(self, *args, code, message, meta={}):
+class TwirpServerException(HTTPException):
+    def __init__(self, *args, code, message, meta: dict[str, Any] | None = None):
         try:
             self._code = errors.Errors(code)
         except ValueError:
             self._code = errors.Errors.Unknown
         self._message = message
-        self._meta = meta
-        super(TwirpServerException, self).__init__(message)
+        self._meta = meta or {}
+        super().__init__(message)
 
     @property
     def code(self):
@@ -38,59 +30,50 @@ class TwirpServerException(httplib.HTTPException):
         return self._meta
 
     def to_dict(self):
-        err = {
-            "code": self._code.value,
-            "msg": self._message,
-            "meta": {}
-        }
+        err = {"code": self._code.value, "msg": self._message, "meta": {}}
         for k, v in self._meta.items():
             err["meta"][k] = str(v)
         return err
 
     def to_json_bytes(self):
-        return json.dumps(self.to_dict()).encode('utf-8')
+        return json.dumps(self.to_dict()).encode("utf-8")
 
     @staticmethod
     def from_json(err_dict):
         return TwirpServerException(
-            code=err_dict.get('code', errors.Errors.Unknown),
-            message=err_dict.get('msg',''),
-            meta=err_dict.get('meta',{}),
+            code=err_dict.get("code", errors.Errors.Unknown),
+            message=err_dict.get("msg", ""),
+            meta=err_dict.get("meta", {}),
         )
+
 
 def InvalidArgument(*args, argument, error):
     return TwirpServerException(
-        code=errors.Errors.InvalidArgument,
-        message="{} {}".format(argument, error),
-        meta={
-            "argument":argument
-        }
+        code=errors.Errors.InvalidArgument, message=f"{argument} {error}", meta={"argument": argument}
     )
 
+
 def RequiredArgument(*args, argument):
-    return InvalidArgument(
-        argument=argument,
-        error="is required"
-    )
+    return InvalidArgument(argument=argument, error="is required")
 
 
 def twirp_error_from_intermediary(status, reason, headers, body):
     # see https://twitchtv.github.io/twirp/docs/errors.html#http-errors-from-intermediary-proxies
     meta = {
-        'http_error_from_intermediary': 'true',
-        'status_code': str(status),
+        "http_error_from_intermediary": "true",
+        "status_code": str(status),
     }
 
     if 300 <= status < 400:
         # twirp uses POST which should not redirect
         code = errors.Errors.Internal
-        location = headers.get('location')
+        location = headers.get("location")
         message = 'unexpected HTTP status code %d "%s" received, Location="%s"' % (
             status,
             reason,
             location,
         )
-        meta['location'] = location
+        meta["location"] = location
 
     else:
         code = {
@@ -108,6 +91,6 @@ def twirp_error_from_intermediary(status, reason, headers, body):
             status,
             reason,
         )
-        meta['body'] = body
+        meta["body"] = body
 
     return TwirpServerException(code=code, message=message, meta=meta)

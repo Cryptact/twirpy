@@ -1,6 +1,5 @@
 import asyncio
 import json
-from typing import Optional
 
 import aiohttp
 
@@ -9,15 +8,11 @@ from . import errors
 
 
 class AsyncTwirpClient:
-    def __init__(
-        self, address: str, session: Optional[aiohttp.ClientSession] = None
-    ) -> None:
+    def __init__(self, address: str, session: aiohttp.ClientSession | None = None) -> None:
         self._address = address
         self._session = session
 
-    async def _make_request(
-        self, *, url, ctx, request, response_obj, session=None, **kwargs
-    ):
+    async def _make_request(self, *, url, ctx, request, response_obj, session=None, **kwargs):
         headers = ctx.get_headers()
         if "headers" in kwargs:
             headers.update(kwargs["headers"])
@@ -30,9 +25,7 @@ class AsyncTwirpClient:
             raise TypeError(f"invalid session type '{type(session).__name__}'")
 
         try:
-            async with await session.post(
-                url=url, data=request.SerializeToString(), **kwargs
-            ) as resp:
+            async with await session.post(url=url, data=request.SerializeToString(), **kwargs) as resp:
                 if resp.status == 200:
                     response = response_obj()
                     response.ParseFromString(await resp.read())

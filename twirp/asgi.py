@@ -3,11 +3,6 @@ import functools
 import typing
 import traceback
 
-try:
-    import ujson as json
-except:
-    import json
-
 from . import base
 from . import exceptions
 from . import errors
@@ -17,6 +12,7 @@ try:
     import contextvars  # Python 3.7+ only.
 except ImportError:  # pragma: no cover
     contextvars = None  # type: ignore
+
 
 # Lifted from starlette.concurrency
 async def run_in_threadpool(func: typing.Callable, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
@@ -32,32 +28,34 @@ async def run_in_threadpool(func: typing.Callable, *args: typing.Any, **kwargs: 
         func = functools.partial(func, **kwargs)
     return await loop.run_in_executor(None, func, *args)
 
+
 def thread_pool_runner(func):
     async def run(ctx, request):
         return await run_in_threadpool(func, ctx, request)
+
     return run
 
-class TwirpASGIApp(base.TwirpBaseApp):
 
+class TwirpASGIApp(base.TwirpBaseApp):
     async def __call__(self, scope, receive, send):
-        assert scope['type'] == 'http'
+        assert scope["type"] == "http"
         ctx = self._ctx_class()
         try:
-            http_method = scope['method']
+            http_method = scope["method"]
             if http_method != "POST":
                 raise exceptions.TwirpServerException(
-                code=errors.Errors.BadRoute,
-                message="unsupported method " + http_method + " (only POST is allowed)",
-                meta={"twirp_invalid_route": http_method + " " + scope['path']},
-            )
+                    code=errors.Errors.BadRoute,
+                    message="unsupported method " + http_method + " (only POST is allowed)",
+                    meta={"twirp_invalid_route": http_method + " " + scope["path"]},
+                )
 
-            headers = {k.decode('utf-8'): v.decode('utf-8') for (k,v) in scope['headers']}
-            ctx.set(ctxkeys.RAW_REQUEST_PATH, scope['path'])
+            headers = {k.decode("utf-8"): v.decode("utf-8") for (k, v) in scope["headers"]}
+            ctx.set(ctxkeys.RAW_REQUEST_PATH, scope["path"])
             ctx.set(ctxkeys.RAW_HEADERS, headers)
             self._hook.request_received(ctx=ctx)
 
-            endpoint = self._get_endpoint(scope['path'])
-            headers = {k.decode('utf-8'): v.decode('utf-8') for (k,v) in scope['headers']}
+            endpoint = self._get_endpoint(scope["path"])
+            headers = {k.decode("utf-8"): v.decode("utf-8") for (k, v) in scope["headers"]}
             self.validate_content_length(headers=headers)
             encoder, decoder = self._get_encoder_decoder(endpoint, headers)
 
@@ -74,21 +72,18 @@ class TwirpASGIApp(base.TwirpBaseApp):
             body_bytes, headers = encoder(response_data)
             headers = dict(ctx.get_response_headers(), **headers)
             # Todo: middleware
-            await self._respond(
-                send=send,
-                status=200,
-                headers=headers,
-                body_bytes=body_bytes
-            )
+            await self._respond(send=send, status=200, headers=headers, body_bytes=body_bytes)
             self._hook.response_sent(ctx=ctx)
         except Exception as e:
             await self.handle_error(ctx, e, scope, receive, send)
 
     def _with_middlewares(self, *args, func, ctx, request):
         chain = iter(self._middlewares + (func,))
+
         def bind(fn):
             if not asyncio.iscoroutinefunction(fn):
                 fn = thread_pool_runner(fn)
+
             async def nxt(ctx, request):
                 try:
                     cur = next(chain)
@@ -96,76 +91,74 @@ class TwirpASGIApp(base.TwirpBaseApp):
                 except StopIteration:
                     pass
                 return await fn(ctx, request)
-            return nxt
-        return bind(next(chain))(ctx,request)
 
+            return nxt
+
+        return bind(next(chain))(ctx, request)
 
     async def handle_error(self, ctx, exc, scope, receive, send):
         status = 500
-        body_bytes = b'{}'
+        body_bytes = b"{}"
         logger = ctx.get_logger()
         error_data = {}
         ctx.set(ctxkeys.ORIGINAL_EXCEPTION, exc)
         try:
             if not isinstance(exc, exceptions.TwirpServerException):
-                error_data['raw_error'] = str(exc)
-                error_data['raw_trace'] = traceback.format_exc()
-                logger.exception("got non-twirp exception while processing request",**error_data)
-                exc = exceptions.TwirpServerException(
-                    code=errors.Errors.Internal,
-                    message="Internal non-Twirp Error"
-                )
+                error_data["raw_error"] = str(exc)
+                error_data["raw_trace"] = traceback.format_exc()
+                logger.exception("got non-twirp exception while processing request", **error_data)
+                exc = exceptions.TwirpServerException(code=errors.Errors.Internal, message="Internal non-Twirp Error")
 
             body_bytes = exc.to_json_bytes()
             status = errors.Errors.get_status_code(exc.code)
-        except Exception as e:
+        except Exception:
             exc = exceptions.TwirpServerException(
-                    code=errors.Errors.Internal,
-                    message="There was an error but it could not be serialized into JSON"
+                code=errors.Errors.Internal, message="There was an error but it could not be serialized into JSON"
             )
-            error_data['raw_error'] = str(exc)
-            error_data['raw_trace'] = traceback.format_exc()
-            logger.exception("got exception while processing request",**error_data)
+            error_data["raw_error"] = str(exc)
+            error_data["raw_trace"] = traceback.format_exc()
+            logger.exception("got exception while processing request", **error_data)
             body_bytes = exc.to_json_bytes()
 
         ctx.set_logger(logger.bind(**error_data))
         ctx.set(ctxkeys.RESPONSE_STATUS, status)
         self._hook.error(ctx=ctx, exc=exc)
         await self._respond(
-            send=send,
-            status=status,
-            headers={'Content-Type':'application/json'},
-            body_bytes=body_bytes
-            )
+            send=send, status=status, headers={"Content-Type": "application/json"}, body_bytes=body_bytes
+        )
         self._hook.response_sent(ctx=ctx)
 
     async def _respond(self, *args, send, status, headers, body_bytes):
-        headers['Content-Length'] = str(len(body_bytes))
-        resp_headers = [(k.encode('utf-8'),v.encode('utf-8')) for (k,v) in headers.items()]
-        await send({
-                'type': 'http.response.start',
-                'status': status,
-                'headers': resp_headers,
-        })
-        await send({
-             'type': 'http.response.body',
-             'body': body_bytes,
-        })
+        headers["Content-Length"] = str(len(body_bytes))
+        resp_headers = [(k.encode("utf-8"), v.encode("utf-8")) for (k, v) in headers.items()]
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": resp_headers,
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": body_bytes,
+            }
+        )
 
     async def _recv_all(self, receive):
-        body = b''
+        body = b""
         more_body = True
         while more_body:
             message = await receive()
-            body += message.get('body', b'')
-            more_body = message.get('more_body', False)
+            body += message.get("body", b"")
+            more_body = message.get("more_body", False)
 
             # the body length exceeded than the size set, raise a valid exception
             # so that proper error is returned to the client
             if self._max_receive_message_length < len(body):
                 raise exceptions.TwirpServerException(
                     code=errors.Errors.InvalidArgument,
-                    message=F"message body exceeds the specified length of {self._max_receive_message_length} bytes"
+                    message=f"message body exceeds the specified length of {self._max_receive_message_length} bytes",
                 )
 
         return body
@@ -174,12 +167,12 @@ class TwirpASGIApp(base.TwirpBaseApp):
     # below the limit set
     def validate_content_length(self, headers):
         try:
-            content_length = int(headers.get('content-length'))
+            content_length = int(headers.get("content-length"))
         except (ValueError, TypeError):
             return
 
         if self._max_receive_message_length < content_length:
             raise exceptions.TwirpServerException(
                 code=errors.Errors.InvalidArgument,
-                message=F"message body exceeds the specified length of {self._max_receive_message_length} bytes"
+                message=f"message body exceeds the specified length of {self._max_receive_message_length} bytes",
             )

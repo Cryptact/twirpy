@@ -38,6 +38,9 @@ packages = ["twirp"]
 
 [tool.hatch.envs.default]
 python = "3.12"
+dependencies = [
+    "aiohttp",
+]
 
 [tool.ruff]
 line-length = 120
@@ -51,3 +54,4 @@ lint.fixable = [
   "PLE", # pylint errors
   "UP",  # pyupgrade
 ]
+exclude = ["example/rpc"]

@@ -2,8 +2,7 @@ from . import exceptions
 from . import errors
 
 
-class TwirpServer(object):
-
+class TwirpServer:
     def __init__(self, *args, service):
         self.service = service
         self._endpoints = {}
@@ -27,8 +26,7 @@ class TwirpServer(object):
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Unimplemented,
                 message="service has no endpoint " + rpc_method,
-                meta={"twirp_invalide_route": "POST " + path})
-
+                meta={"twirp_invalide_route": "POST " + path},
+            )
 
         return endpoint
-

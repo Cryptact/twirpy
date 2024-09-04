@@ -18,8 +18,8 @@ _sym_lookup = _symbol_database.Default().GetSymbol
 Endpoint = namedtuple("Endpoint", ["service_name", "name", "function", "input", "output"])
 
 
-class TwirpBaseApp(object):
-    def __init__(self, *middlewares, hook=None, prefix="", max_receive_message_length=1024*100*100, ctx_class=None):
+class TwirpBaseApp:
+    def __init__(self, *middlewares, hook=None, prefix="", max_receive_message_length=1024 * 100 * 100, ctx_class=None):
         self._prefix = prefix
         self._services = {}
         self._max_receive_message_length = max_receive_message_length
@@ -34,17 +34,14 @@ class TwirpBaseApp(object):
         self._hook = hook
 
     def add_service(self, svc: server.TwirpServer):
-        self._services[self._prefix+svc.prefix] = svc
+        self._services[self._prefix + svc.prefix] = svc
 
     def _get_endpoint(self, path):
         svc = self._services.get(path.rsplit("/", 1)[0], None)
         if svc is None:
-            raise exceptions.TwirpServerException(
-                code=errors.Errors.NotFound,
-                message="not found"
-            )
+            raise exceptions.TwirpServerException(code=errors.Errors.NotFound, message="not found")
 
-        return svc.get_endpoint(path[len(self._prefix):])
+        return svc.get_endpoint(path[len(self._prefix) :])
 
     @staticmethod
     def json_decoder(body, data_obj=None):
@@ -63,10 +60,14 @@ class TwirpBaseApp(object):
         if not isinstance(value, data_obj):
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Internal,
-                message=("bad service response type " + str(type(value)) +
-                 ", expecting: " + data_obj.DESCRIPTOR.full_name))
+                message=(
+                    "bad service response type " + str(type(value)) + ", expecting: " + data_obj.DESCRIPTOR.full_name
+                ),
+            )
 
-        return json_format.MessageToJson(value, preserving_proto_field_name=True).encode('utf-8'), {"Content-Type": "application/json"}
+        return json_format.MessageToJson(value, preserving_proto_field_name=True).encode("utf-8"), {
+            "Content-Type": "application/json"
+        }
 
     @staticmethod
     def proto_decoder(body, data_obj=None):
@@ -85,13 +86,15 @@ class TwirpBaseApp(object):
         if not isinstance(value, data_obj):
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Internal,
-                message=("bad service response type " + str(type(value)) +
-                 ", expecting: " + data_obj.DESCRIPTOR.full_name))
+                message=(
+                    "bad service response type " + str(type(value)) + ", expecting: " + data_obj.DESCRIPTOR.full_name
+                ),
+            )
 
         return value.SerializeToString(), {"Content-Type": "application/protobuf"}
 
     def _get_encoder_decoder(self, endpoint, headers):
-        ctype = headers.get('content-type', None)
+        ctype = headers.get("content-type", None)
         if "application/json" == ctype:
             decoder = functools.partial(self.json_decoder, data_obj=endpoint.input)
             encoder = functools.partial(self.json_encoder, data_obj=endpoint.output)
@@ -100,7 +103,6 @@ class TwirpBaseApp(object):
             encoder = functools.partial(self.proto_encoder, data_obj=endpoint.output)
         else:
             raise exceptions.TwirpServerException(
-                code=errors.Errors.BadRoute,
-                message="unexpected Content-Type: " + str(ctype)
+                code=errors.Errors.BadRoute, message="unexpected Content-Type: " + str(ctype)
             )
         return encoder, decoder

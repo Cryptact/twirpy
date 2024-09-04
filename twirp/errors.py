@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Errors(Enum):
     Canceled = "canceled"
     Unknown = "unknown"
@@ -44,4 +45,3 @@ class Errors(Enum):
             Errors.DataLoss: 500,
             Errors.NoError: 200,
         }.get(code, 500)
-
