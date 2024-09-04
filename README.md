@@ -3,7 +3,7 @@
 > Twirp is a framework for service-to-service communication emphasizing simplicity and minimalism.
 > It generates routing and serialization from API definition files and lets you focus on your application's logic
 > instead of thinking about folderol like HTTP methods and paths and JSON.
-> 
+>
 > -- <cite>[Twirp's README](https://github.com/twitchtv/twirp/blob/main/README.md)</cite>
 
 Twirpy is a Python implementation of the Twirp framework.
@@ -21,7 +21,7 @@ The runtime library package contains common types like `TwirpServer` and `TwirpC
 
 Add the Twirp package to your Python project with:
 ```
-pip install twirp
+pip install twirpy
 ```
 
 ### Code Generator
@@ -33,7 +33,7 @@ First, install the following prerequisites:
 - [Go](https://golang.org/): For installation instructions, see [Go’s documentation](https://golang.org/doc/install).
 - [Protocol Buffers](https://developers.google.com/protocol-buffers) compiler: For installation instructions, see [Protocol Buffer Compiler Installation documentation](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation). You can also use your package manager (e.g. `brew install protobuf` on macOS).
 
-The installed plugin need to be accessible by the protoc compiler. 
+The installed plugin need to be accessible by the protoc compiler.
 Set GOBIN (see [go help environment](https://golang.org/cmd/go/#hdr-Environment_variables)) to define where the tool dependencies will be installed.
 You might need to add GOBIN to your PATH:
 ```sh
@@ -57,13 +57,10 @@ For more information on how to generate code, see the [example](example/README.m
 
 ## Development
 
-```sh
-pyenv install
-python -m venv --upgrade-deps venv
-source venv/bin/activate
-pip install setuptools
-pip install -e .
-```
+We use [`hatch`](https://hatch.pypa.io/latest/) to manage the development process.
+
+To open a shell with the development environment, run: `hatch shell`.
+To run the linter, run: `hatch fmt --check` or `hatch fmt` to fix the issues.
 
 ## Standing on the shoulders of giants
 
