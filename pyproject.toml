@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+    "hatch-semver"
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -30,6 +33,8 @@ async = [
 
 [tool.hatch.version]
 path = "twirp/__init__.py"
+validate-bump = true
+scheme = "semver"
 
 [tool.hatch.build.targets.sdist]
 include = ["/twirp"]
