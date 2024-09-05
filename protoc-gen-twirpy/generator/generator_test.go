@@ -14,6 +14,7 @@ func TestImportBuilder(t *testing.T) {
 		"twirp.twitch.example.Price": "twirp/twitch/example/haberdasher.proto",
 		"twirp.twitch.example.Color": "twirp/twitch/example_folder/haberdasher.proto",
 		"twirp.twitch.example.Size":  "twirp/twitch/example/haberdasher_extension.proto",
+		"google.protobuf.Empty":      "google/protobuf/empty.proto",
 	})
 
 	testCases := []struct {
@@ -45,11 +46,11 @@ func TestImportBuilder(t *testing.T) {
 		{
 			typeToImport:    "twirp.twitch.example.Color",
 			importKey:       "twirp.twitch.example_folder.haberdasher_pb2",
-			qualifiedImport: "__haberdasher_pb2.Color",
+			qualifiedImport: "_haberdasher_pb2_1.Color",
 			expectedImport: &TwirpImport{
 				From:   "twirp.twitch.example_folder",
 				Import: "haberdasher_pb2",
-				Alias:  "__haberdasher_pb2",
+				Alias:  "_haberdasher_pb2_1",
 			},
 		},
 		{
@@ -60,6 +61,16 @@ func TestImportBuilder(t *testing.T) {
 				From:   "twirp.twitch.example",
 				Import: "haberdasher_extension_pb2",
 				Alias:  "_haberdasher_extension_pb2",
+			},
+		},
+		{
+			typeToImport:    "google.protobuf.Empty",
+			importKey:       "google.protobuf.empty_pb2",
+			qualifiedImport: "_empty_pb2.Empty",
+			expectedImport: &TwirpImport{
+				From:   "google.protobuf",
+				Import: "empty_pb2",
+				Alias:  "_empty_pb2",
 			},
 		},
 	}
