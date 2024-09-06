@@ -33,11 +33,16 @@ class {{.Name}}ServiceProtocol(Protocol):
 	def {{.Name}}(self, ctx: Context, request: {{.QualifiedInput}}) -> {{.QualifiedOutput}}: ...
 	{{- end }}
 
+class Async{{.Name}}ServiceProtocol(Protocol):
+	{{- range .Methods }}
+	async def {{.Name}}(self, ctx: Context, request: {{.QualifiedInput}}) -> {{.QualifiedOutput}}: ...
+	{{- end }}
+
 class {{.Name}}Server(TwirpServer):
 	def __init__(
 		self,
 		*,
-		service: {{.Name}}ServiceProtocol,
+		service: {{.Name}}ServiceProtocol | Async{{.Name}}ServiceProtocol,
 		server_path_prefix: str = "/twirp"
 	):
 		super().__init__(service=service)
