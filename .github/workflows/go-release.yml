@@ -32,3 +32,4 @@ jobs:
         project_path: ./protoc-gen-twirpy
         binary_name: protoc-gen-twirpy
         asset_name: protoc-gen-twirpy-${{ matrix.goos }}-${{ matrix.goarch }}
+        release_tag: ${{ github.ref_name }}
