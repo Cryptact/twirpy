@@ -38,7 +38,7 @@ Unzip the archive and move the binary to a directory in your PATH.
 On macOS, you can use the following commands:
 ```sh
 curl -L -o- \
-  https://github.com/Cryptact/twirpy/releases/latest/download/protoc-gen-twirpy_Darwin_arm64.tar.gz \
+  https://github.com/Cryptact/twirpy/releases/latest/download/protoc-gen-twirpy-darwin-arm64.tar.gz \
   | tar xz -C ~/.local/bin protoc-gen-twirpy
 ````
 
