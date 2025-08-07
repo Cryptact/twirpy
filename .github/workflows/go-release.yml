@@ -28,7 +28,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
-        goversion: 1.23.1
+        goversion: 1.24.6
         project_path: ./protoc-gen-twirpy
         binary_name: protoc-gen-twirpy
         asset_name: protoc-gen-twirpy-${{ matrix.goos }}-${{ matrix.goarch }}

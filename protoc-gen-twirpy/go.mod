@@ -1,10 +1,10 @@
 module github.com/verloop/twirpy/protoc-gen-twirpy
 
-go 1.23.1
+go 1.24
 
 require (
 	github.com/stretchr/testify v1.9.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
