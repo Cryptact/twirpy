@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"text/template"
 
 	"google.golang.org/protobuf/proto"
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
@@ -53,11 +54,11 @@ func generateFiles(r *plugin.CodeGeneratorRequest) ([]*plugin.CodeGeneratorRespo
 			return nil, fmt.Errorf("File[%s][descriptor]: %w", fileName, err)
 		}
 
-		twirpFile, err := generateTwirpFile(templateVars)
+		twirpFiles, err := generateTwirpFiles(templateVars)
 		if err != nil {
 			return nil, fmt.Errorf("File[%s][descriptor]: %w", fileName, err)
 		}
-		responseFiles = append(responseFiles, twirpFile)
+		responseFiles = append(responseFiles, twirpFiles...)
 	}
 
 	return responseFiles, nil
@@ -112,16 +113,23 @@ func buildTwirpServiceDescription(messagesToFiles map[string]string, fd *descrip
 	return vars, nil
 }
 
-func generateTwirpFile(vars *ProtoFileDescription) (*plugin.CodeGeneratorResponse_File, error) {
-	var buf = &bytes.Buffer{}
-	if err := TwirpTemplate.Execute(buf, vars); err != nil {
-		return nil, err
+func generateTwirpFiles(vars *ProtoFileDescription) ([]*plugin.CodeGeneratorResponse_File, error) {
+	files := []*plugin.CodeGeneratorResponse_File{}
+
+	names := []string{"", "_client", "_async_client"}
+
+	for idx, tmpl := range []*template.Template{TwirpServerTemplate, TwirpClientTemplate, TwirpAsyncClientTemplate} {
+		var buf = &bytes.Buffer{}
+		if err := tmpl.Execute(buf, vars); err != nil {
+			return nil, err
+		}
+		files = append(files, &plugin.CodeGeneratorResponse_File{
+			Name:    proto.String(strings.TrimSuffix(vars.FileName, path.Ext(vars.FileName)) + names[idx] + "_twirp.py"),
+			Content: proto.String(buf.String()),
+		})
 	}
 
-	return &plugin.CodeGeneratorResponse_File{
-		Name:    proto.String(strings.TrimSuffix(vars.FileName, path.Ext(vars.FileName)) + "_twirp.py"),
-		Content: proto.String(buf.String()),
-	}, nil
+	return files, nil
 }
 
 func getSymbol(name string) string {
