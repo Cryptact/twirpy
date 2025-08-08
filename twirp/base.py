@@ -1,10 +1,11 @@
 import functools
-from collections import namedtuple
+from collections.abc import Awaitable
+from typing import Any
+from collections.abc import Callable
 
-from google.protobuf import json_format
-from google.protobuf import message
+from google.protobuf import json_format, message
 from google.protobuf import symbol_database as _symbol_database
-
+from google.protobuf.message import Message
 
 from . import context
 
@@ -12,31 +13,39 @@ from . import server
 from . import exceptions
 from . import errors
 from . import hook as vtwirp_hook
+from .endpoint import Endpoint, TwirpMethod
 
 _sym_lookup = _symbol_database.Default().GetSymbol
 
-Endpoint = namedtuple("Endpoint", ["service_name", "name", "function", "input", "output"])
+Middleware = Callable[[context.Context, Message, TwirpMethod], Awaitable[Message]]
 
 
 class TwirpBaseApp:
-    def __init__(self, *middlewares, hook=None, prefix="", max_receive_message_length=1024 * 100 * 100, ctx_class=None):
-        self._prefix = prefix
-        self._services = {}
-        self._max_receive_message_length = max_receive_message_length
+    def __init__(
+        self,
+        *middlewares: Middleware,
+        hook: vtwirp_hook.TwirpHook | None = None,
+        prefix: str = "",
+        max_receive_message_length: int = 1024 * 100 * 100,
+        ctx_class: type[context.Context] | None = None,
+    ) -> None:
+        self._prefix: str = prefix
+        self._services: dict[str, server.TwirpServer] = {}
+        self._max_receive_message_length: int = max_receive_message_length
         if ctx_class is None:
             ctx_class = context.Context
         assert issubclass(ctx_class, context.Context)
-        self._ctx_class = ctx_class
-        self._middlewares = middlewares
+        self._ctx_class: type[context.Context] = ctx_class
+        self._middlewares: tuple[Middleware, ...] = middlewares
         if hook is None:
             hook = vtwirp_hook.TwirpHook()
         assert isinstance(hook, vtwirp_hook.TwirpHook)
-        self._hook = hook
+        self._hook: vtwirp_hook.TwirpHook = hook
 
-    def add_service(self, svc: server.TwirpServer):
+    def add_service(self, svc: server.TwirpServer) -> None:
         self._services[self._prefix + svc.prefix] = svc
 
-    def _get_endpoint(self, path):
+    def _get_endpoint(self, path: str) -> Endpoint:
         svc = self._services.get(path.rsplit("/", 1)[0], None)
         if svc is None:
             raise exceptions.TwirpServerException(code=errors.Errors.NotFound, message="not found")
@@ -44,7 +53,7 @@ class TwirpBaseApp:
         return svc.get_endpoint(path[len(self._prefix) :])
 
     @staticmethod
-    def json_decoder(body, data_obj=None):
+    def json_decoder(body: bytes, data_obj: type[Message]) -> Message:
         data = data_obj()
         try:
             json_format.Parse(body, data)
@@ -56,7 +65,7 @@ class TwirpBaseApp:
         return data
 
     @staticmethod
-    def json_encoder(value, data_obj=None):
+    def json_encoder(value: Any, data_obj: type[Message]) -> tuple[bytes, dict[str, str]]:
         if not isinstance(value, data_obj):
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Internal,
@@ -70,7 +79,7 @@ class TwirpBaseApp:
         }
 
     @staticmethod
-    def proto_decoder(body, data_obj=None):
+    def proto_decoder(body: bytes, data_obj: type[Message]) -> Message:
         data = data_obj()
         try:
             data.ParseFromString(body)
@@ -82,7 +91,7 @@ class TwirpBaseApp:
         return data
 
     @staticmethod
-    def proto_encoder(value, data_obj=None):
+    def proto_encoder(value: Any, data_obj: type[Message]) -> tuple[bytes, dict[str, str]]:
         if not isinstance(value, data_obj):
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Internal,
@@ -93,7 +102,9 @@ class TwirpBaseApp:
 
         return value.SerializeToString(), {"Content-Type": "application/protobuf"}
 
-    def _get_encoder_decoder(self, endpoint, headers):
+    def _get_encoder_decoder(
+        self, endpoint: Endpoint, headers: dict[str, str]
+    ) -> tuple[Callable[[Any], tuple[bytes, dict[str, str]]], Callable[[bytes], Message]]:
         ctype = headers.get("content-type", None)
         if "application/json" == ctype:
             decoder = functools.partial(self.json_decoder, data_obj=endpoint.input)

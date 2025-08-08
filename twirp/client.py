@@ -1,15 +1,21 @@
-import requests
+from typing import Any
 
+import requests
+from google.protobuf.message import Message
+
+from . import context
 from . import exceptions
 from . import errors
 
 
 class TwirpClient:
-    def __init__(self, address, timeout=5):
+    def __init__(self, address: str, timeout: int = 5) -> None:
         self._address = address
         self._timeout = timeout
 
-    def _make_request(self, *args, url, ctx, request, response_obj, **kwargs):
+    def _make_request[Req: Message, Resp: Message](
+        self, *, url: str, ctx: context.Context, request: Req, response_obj: type[Resp], **kwargs: Any
+    ) -> Resp:
         if "timeout" not in kwargs:
             kwargs["timeout"] = self._timeout
         headers = ctx.get_headers()
@@ -20,7 +26,7 @@ class TwirpClient:
         try:
             resp = requests.post(url=self._address + url, data=request.SerializeToString(), **kwargs)
             if resp.status_code == 200:
-                response = response_obj()
+                response: Resp = response_obj()
                 response.ParseFromString(resp.content)
                 return response
             try:

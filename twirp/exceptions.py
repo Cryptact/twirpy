@@ -1,12 +1,21 @@
 import json
 from http.client import HTTPException
-from typing import Any
+from typing import Any, TypedDict, Self
+
+from multidict import CIMultiDictProxy
+from requests.structures import CaseInsensitiveDict
 
 from . import errors
 
 
+class TwirpServerExceptionDict(TypedDict, total=False):
+    code: str
+    msg: str
+    meta: dict[str, Any]
+
+
 class TwirpServerException(HTTPException):
-    def __init__(self, *args, code, message, meta: dict[str, Any] | None = None):
+    def __init__(self, *, code: errors.Errors | str, message: str, meta: dict[str, Any] | None = None):
         try:
             self._code = errors.Errors(code)
         except ValueError:
@@ -16,50 +25,52 @@ class TwirpServerException(HTTPException):
         super().__init__(message)
 
     @property
-    def code(self):
+    def code(self) -> errors.Errors:
         if isinstance(self._code, errors.Errors):
             return self._code
         return errors.Errors.Unknown
 
     @property
-    def message(self):
+    def message(self) -> str:
         return self._message
 
     @property
-    def meta(self):
+    def meta(self) -> dict[str, Any]:
         return self._meta
 
-    def to_dict(self):
-        err = {"code": self._code.value, "msg": self._message, "meta": {}}
+    def to_dict(self) -> TwirpServerExceptionDict:
+        err: TwirpServerExceptionDict = {"code": self._code.value, "msg": self._message, "meta": {}}
         for k, v in self._meta.items():
             err["meta"][k] = str(v)
         return err
 
-    def to_json_bytes(self):
+    def to_json_bytes(self) -> bytes:
         return json.dumps(self.to_dict()).encode("utf-8")
 
-    @staticmethod
-    def from_json(err_dict):
-        return TwirpServerException(
+    @classmethod
+    def from_json(cls, err_dict: TwirpServerExceptionDict) -> Self:
+        return cls(
             code=err_dict.get("code", errors.Errors.Unknown),
             message=err_dict.get("msg", ""),
             meta=err_dict.get("meta", {}),
         )
 
 
-def InvalidArgument(*args, argument, error):
+def InvalidArgument(*, argument: str, error: str) -> TwirpServerException:
     return TwirpServerException(
         code=errors.Errors.InvalidArgument, message=f"{argument} {error}", meta={"argument": argument}
     )
 
 
-def RequiredArgument(*args, argument):
+def RequiredArgument(*, argument: str) -> TwirpServerException:
     return InvalidArgument(argument=argument, error="is required")
 
 
-def twirp_error_from_intermediary(status, reason, headers, body):
+def twirp_error_from_intermediary(
+    status: int, reason: str | None, headers: CaseInsensitiveDict[str] | CIMultiDictProxy[str], body: str
+) -> TwirpServerException:
     # see https://twitchtv.github.io/twirp/docs/errors.html#http-errors-from-intermediary-proxies
-    meta = {
+    meta: dict[str, str | None] = {
         "http_error_from_intermediary": "true",
         "status_code": str(status),
     }

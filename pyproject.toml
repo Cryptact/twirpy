@@ -10,7 +10,7 @@ name = "twirpy"
 dynamic = ["version"]
 description = "Twirp runtime library for Python"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "BSD-3-Clause"
 keywords = [
   "protobuf",
@@ -18,6 +18,7 @@ keywords = [
   "twirp",
 ]
 dependencies = [
+    "asgiref",
     "protobuf",
     "requests",
     "structlog",
@@ -42,10 +43,17 @@ include = ["/twirp"]
 packages = ["twirp"]
 
 [tool.hatch.envs.default]
-python = "3.12"
+python = "3.13"
 dependencies = [
     "aiohttp",
 ]
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive twirp"
 
 [tool.ruff]
 line-length = 120
