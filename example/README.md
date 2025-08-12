@@ -83,7 +83,7 @@ If you open the generated `service_twirp.py` file, you should see the code to in
 
 ```go
 class HaberdasherServiceProtocol(Protocol):
-	def MakeHat(self, ctx: Context, request: _haberdasher_pb2.Size) -> _haberdasher_pb2.Hat: ...
+	async def MakeHat(self, ctx: Context, request: _haberdasher_pb2.Size) -> _haberdasher_pb2.Hat: ...
 ```
 
 If you open `service_client_twirp.py` and `service_async_client_twirp.py`, you will see the client code for the clients.
