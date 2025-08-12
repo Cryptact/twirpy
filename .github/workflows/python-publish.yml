@@ -62,13 +62,12 @@ jobs:
 
     steps:
       - name: Retrieve release distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: release-dists
           path: dist/
 
       - name: Publish release distributions to PyPI
-        # IMPORTANT: pin actions to a commit SHA.
-        uses: pypa/gh-action-pypi-publish@8a08d616893759ef8e1aa1f2785787c0b97e20d6
+        uses: pypa/gh-action-pypi-publish@release/v1
         #with:
         #  attestations: true
