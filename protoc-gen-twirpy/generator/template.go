@@ -8,7 +8,6 @@ var TwirpServerTemplate = template.Must(template.New("TwirpServerTemplate").Pars
 
 from typing import Protocol
 
-from google.protobuf import symbol_database as _symbol_database
 from twirp.context import Context
 from twirp.endpoint import Endpoint
 from twirp.server import TwirpServer
@@ -16,7 +15,6 @@ from twirp.server import TwirpServer
 {{if .From}}from {{.From}} {{end}}import {{.Import}} as {{.Alias}}
 {{- end}}
 
-_sym_db = _symbol_database.Default()
 {{range .Services}}
 class {{.Name}}ServiceProtocol(Protocol):
 	{{- range .Methods }}
@@ -49,14 +47,12 @@ var TwirpClientTemplate = template.Must(template.New("TwirpClientTemplate").Pars
 
 from typing import Any
 
-from google.protobuf import symbol_database as _symbol_database
 from twirp.client import TwirpClient
 from twirp.context import Context
 {{ range .Imports}}
 {{if .From}}from {{.From}} {{end}}import {{.Import}} as {{.Alias}}
 {{- end}}
 
-_sym_db = _symbol_database.Default()
 {{range .Services}}
 class {{.Name}}Client(TwirpClient):
 {{range .Methods}}
@@ -84,14 +80,12 @@ var TwirpAsyncClientTemplate = template.Must(template.New("TwirpAsyncClientTempl
 from typing import Any
 
 from aiohttp import ClientSession
-from google.protobuf import symbol_database as _symbol_database
 from twirp.async_client import AsyncTwirpClient
 from twirp.context import Context
 {{ range .Imports}}
 {{if .From}}from {{.From}} {{end}}import {{.Import}} as {{.Alias}}
 {{- end}}
 
-_sym_db = _symbol_database.Default()
 {{range .Services}}
 class Async{{.Name}}Client(AsyncTwirpClient):
 {{range .Methods}}
