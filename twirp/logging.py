@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Any
 
 import structlog
 from structlog.stdlib import LoggerFactory, add_log_level
@@ -7,7 +8,7 @@ from structlog.stdlib import LoggerFactory, add_log_level
 _configured = False
 
 
-def configure(force=False):
+def configure(force: bool = False) -> None:
     """
     Configures logging & structlog modules
 
@@ -52,11 +53,11 @@ def configure(force=False):
     _configured = True
 
 
-def get_logger(**kwargs):
+def get_logger(**kwargs: Any) -> structlog.stdlib.BoundLogger:
     """
     Get the structlog logger
     """
     # Configure logging modules
     configure()
     # Return structlog
-    return structlog.get_logger(**kwargs)
+    return structlog.stdlib.get_logger(**kwargs)

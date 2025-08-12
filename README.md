@@ -58,6 +58,8 @@ We use [`hatch`](https://hatch.pypa.io/latest/) to manage the development proces
 To open a shell with the development environment, run: `hatch shell`.
 To run the linter, run: `hatch fmt --check` or `hatch fmt` to fix the issues.
 
+To run the type checker, run: `hatch run types:check`.
+
 ## Standing on the shoulders of giants
 
 - The initial version of twirpy was made from an internal copy of https://github.com/daroot/protoc-gen-twirp_python_srv

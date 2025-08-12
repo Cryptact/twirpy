@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Self
 
 
 class Errors(Enum):
@@ -22,8 +23,8 @@ class Errors(Enum):
     Malformed = "malformed"
     NoError = ""
 
-    @staticmethod
-    def get_status_code(code):
+    @classmethod
+    def get_status_code(cls, code: Self) -> int:
         return {
             Errors.Canceled: 408,
             Errors.Unknown: 500,

@@ -1,10 +1,13 @@
-import asyncio
 import json
+from typing import Any
 
 import aiohttp
+from aiohttp.typedefs import StrOrURL
+from google.protobuf.message import Message
 
 from . import exceptions
 from . import errors
+from . import context
 
 
 class AsyncTwirpClient:
@@ -12,7 +15,16 @@ class AsyncTwirpClient:
         self._address = address
         self._session = session
 
-    async def _make_request(self, *, url, ctx, request, response_obj, session=None, **kwargs):
+    async def _make_request[RQ: Message, RP: Message](
+        self,
+        *,
+        url: StrOrURL,
+        ctx: context.Context,
+        request: RQ,
+        response_obj: type[RP],
+        session: aiohttp.ClientSession | None = None,
+        **kwargs: Any,
+    ) -> RP:
         headers = ctx.get_headers()
         if "headers" in kwargs:
             headers.update(kwargs["headers"])
@@ -36,7 +48,7 @@ class AsyncTwirpClient:
                     raise exceptions.twirp_error_from_intermediary(
                         resp.status, resp.reason, resp.headers, await resp.text()
                     ) from None
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             raise exceptions.TwirpServerException(
                 code=errors.Errors.DeadlineExceeded,
                 message=str(e) or "request timeout",

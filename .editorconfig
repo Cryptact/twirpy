@@ -13,3 +13,6 @@ indent_size = 4
 
 [*.go]
 indent_style = tab
+
+[*.data]
+indent_style = tab

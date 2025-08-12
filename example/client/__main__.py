@@ -2,7 +2,7 @@ from twirp.context import Context
 from twirp.exceptions import TwirpServerException
 
 from ..rpc.haberdasher import service_pb2 as pb
-from ..rpc.haberdasher.service_twirp import HaberdasherClient
+from ..rpc.haberdasher.service_client_twirp import HaberdasherClient
 
 
 def main():

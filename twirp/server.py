@@ -1,18 +1,21 @@
+from typing import Any
+
+from .endpoint import Endpoint
 from . import exceptions
 from . import errors
 
 
 class TwirpServer:
-    def __init__(self, *args, service):
-        self.service = service
-        self._endpoints = {}
-        self._prefix = ""
+    def __init__(self, *, service: Any) -> None:
+        self.service: Any = service
+        self._endpoints: dict[str, Endpoint] = {}
+        self._prefix: str = ""
 
     @property
-    def prefix(self):
+    def prefix(self) -> str:
         return self._prefix
 
-    def get_endpoint(self, path):
+    def get_endpoint(self, path: str) -> Endpoint:
         (_, url_pre, rpc_method) = path.rpartition(self._prefix + "/")
         if not url_pre or not rpc_method:
             raise exceptions.TwirpServerException(
@@ -21,7 +24,7 @@ class TwirpServer:
                 meta={"twirp_invalid_route": "POST " + path},
             )
 
-        endpoint = self._endpoints.get(rpc_method, None)
+        endpoint: Endpoint | None = self._endpoints.get(rpc_method, None)
         if not endpoint:
             raise exceptions.TwirpServerException(
                 code=errors.Errors.Unimplemented,
