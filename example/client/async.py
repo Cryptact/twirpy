@@ -5,7 +5,7 @@ from twirp.context import Context
 from twirp.exceptions import TwirpServerException
 
 from ..rpc.haberdasher import service_pb2 as pb
-from ..rpc.haberdasher.service_twirp import AsyncHaberdasherClient
+from ..rpc.haberdasher.service_async_client_twirp import AsyncHaberdasherClient
 
 
 async def main():

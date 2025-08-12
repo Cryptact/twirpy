@@ -7,7 +7,7 @@ from ..rpc.haberdasher import service_pb2 as pb
 
 
 class HaberdasherService:
-    def MakeHat(self, context: Context, size: pb.Size) -> pb.Hat:
+    async def MakeHat(self, context: Context, size: pb.Size) -> pb.Hat:
         if size.inches <= 0:
             raise InvalidArgument(argument="inches", error="I can't make a hat that small!")
         return pb.Hat(
