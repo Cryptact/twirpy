@@ -90,3 +90,39 @@ func TestImportBuilder(t *testing.T) {
 		})
 	}
 }
+
+func TestImportBuilderRootLevel(t *testing.T) {
+	// currentFileName has no directory component: currentFileDir must be ""
+	// and root-level dependencies must produce absolute imports, not "."
+	ib := newImportBuilder(map[string]string{
+		"mypackage.Foo": "types.proto",
+	}, "service.proto")
+
+	qualified, err := ib.addImportAndQualify("mypackage.Foo")
+	assert.NoError(t, err)
+	assert.Equal(t, "_types_pb2.Foo", qualified)
+	// From must be "" (absolute import), not "." (relative)
+	assert.Equal(t, &TwirpImport{
+		From:   "",
+		Import: "types_pb2",
+		Alias:  "_types_pb2",
+	}, ib.imports["types_pb2"])
+}
+
+func TestImportBuilderHyphenatedDirectory(t *testing.T) {
+	// Hyphens in directory names are normalised to underscores so that the
+	// directory string matches the Python module path produced by getModuleName.
+	ib := newImportBuilder(map[string]string{
+		"my_org.my_service.Request": "my-org/my-service/types.proto",
+	}, "my-org/my-service/service.proto")
+
+	qualified, err := ib.addImportAndQualify("my_org.my_service.Request")
+	assert.NoError(t, err)
+	assert.Equal(t, "_types_pb2.Request", qualified)
+	// Same package after hyphen normalisation → relative import
+	assert.Equal(t, &TwirpImport{
+		From:   ".",
+		Import: "types_pb2",
+		Alias:  "_types_pb2",
+	}, ib.imports["my_org.my_service.types_pb2"])
+}

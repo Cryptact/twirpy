@@ -46,8 +46,10 @@ func (ib *importBuilder) addImportAndQualify(typeToImport string) (string, error
 			moduleNameSlice := strings.Split(moduleName, ".")
 			strippedModuleName := moduleNameSlice[len(moduleNameSlice)-1]
 			modulePath := strings.Join(moduleNameSlice[:len(moduleNameSlice)-1], ".")
-			// Use relative import when the module is in the same package as the file being generated
-			if modulePath == ib.currentFileDir {
+			// Use relative import when the module is in the same package as the file being generated.
+			// Require modulePath to be non-empty: an empty modulePath (root-level module) would
+			// otherwise match an empty currentFileDir and incorrectly emit a "." relative import.
+			if modulePath != "" && modulePath == ib.currentFileDir {
 				modulePath = "."
 			}
 			alias := ib.generateAlias(strippedModuleName)
