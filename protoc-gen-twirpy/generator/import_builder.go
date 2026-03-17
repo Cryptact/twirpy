@@ -9,13 +9,25 @@ type importBuilder struct {
 	seenAliases    map[string]struct{}
 	imports        map[string]*TwirpImport
 	messagesToFile map[string]string
+	currentFileDir string
 }
 
-func newImportBuilder(messagesToFile map[string]string) *importBuilder {
+func newImportBuilder(messagesToFile map[string]string, currentFileName string) *importBuilder {
+	// Extract directory from proto filename: "crypto/v1.proto" -> "crypto"
+	dir := ""
+	parts := strings.Split(currentFileName, "/")
+	if len(parts) > 1 {
+		dirParts := parts[:len(parts)-1]
+		for i, p := range dirParts {
+			dirParts[i] = strings.ReplaceAll(p, "-", "_")
+		}
+		dir = strings.Join(dirParts, ".")
+	}
 	return &importBuilder{
 		messagesToFile: messagesToFile,
 		seenAliases:    make(map[string]struct{}),
 		imports:        make(map[string]*TwirpImport),
+		currentFileDir: dir,
 	}
 }
 
@@ -34,6 +46,10 @@ func (ib *importBuilder) addImportAndQualify(typeToImport string) (string, error
 			moduleNameSlice := strings.Split(moduleName, ".")
 			strippedModuleName := moduleNameSlice[len(moduleNameSlice)-1]
 			modulePath := strings.Join(moduleNameSlice[:len(moduleNameSlice)-1], ".")
+			// Use relative import when the module is in the same package as the file being generated
+			if modulePath == ib.currentFileDir {
+				modulePath = "."
+			}
 			alias := ib.generateAlias(strippedModuleName)
 			ib.imports[moduleName] = &TwirpImport{
 				From:   modulePath,
