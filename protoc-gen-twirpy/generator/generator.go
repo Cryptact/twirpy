@@ -71,7 +71,7 @@ func buildTwirpServiceDescription(messagesToFiles map[string]string, fd *descrip
 		FileName: name,
 	}
 
-	imports := newImportBuilder(messagesToFiles)
+	imports := newImportBuilder(messagesToFiles, name)
 
 	for _, service := range fd.GetService() {
 		serviceURL := fmt.Sprintf("%s.%s", fd.GetPackage(), service.GetName())
