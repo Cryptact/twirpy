@@ -19,6 +19,7 @@ keywords = [
 ]
 dependencies = [
     "asgiref",
+    "multidict",
     "protobuf",
     "requests",
     "structlog",
